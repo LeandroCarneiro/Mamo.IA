@@ -53,7 +53,10 @@ non_ov_cases = pd.DataFrame(non_ov_cases)
 non_ov_cases['Tag'] = 'NonOV'
 
 # Combine the data into a single dataframe
-df_cancer = pd.concat([brca_cases, nonbrca_cases, crc_cases, non_crc_cases, luad_cases, non_luad_cases, ov_cases, non_ov_cases], ignore_index=True)
+# df_cancer = pd.concat([brca_cases, nonbrca_cases, crc_cases, non_crc_cases, luad_cases, non_luad_cases, ov_cases, non_ov_cases], ignore_index=True) #everything except healthy
+# df_cancer = pd.concat([brca_cases, healthy_cases, nonbrca_cases, crc_cases, non_crc_cases, luad_cases, non_luad_cases, ov_cases, non_ov_cases], ignore_index=True) #everything including healthy
+df_cancer = pd.concat([healthy_cases, brca_cases, crc_cases, luad_cases, ov_cases], ignore_index=True) #cases of cancer x healthy
+# df_cancer = pd.concat([healthy_cases, prebrca_cases, cancer_cases], ignore_index=True) #blood samples
 
 # Set the first column as the index (cpg sites)
 df_cancer.set_index(df_cancer.columns[0], inplace=True)
