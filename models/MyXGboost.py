@@ -31,7 +31,12 @@ def RandomForest300(X_train, y_train):
     return model
 
 def LightGBM(X_train, y_train):
-    model = LGBMClassifier(num_class = 3)
+    model = LGBMClassifier(num_class = 1, objective='binary', metric='binary_logloss', boosting_type='gbdt', num_leaves=31, learning_rate=0.05, n_estimators=20)
+    model.fit(X_train, y_train)
+    return model
+
+def LightGBMMulticlass(X_train, y_train):
+    model = LGBMClassifier(num_class = 2)
     model.fit(X_train, y_train)
     return model
 

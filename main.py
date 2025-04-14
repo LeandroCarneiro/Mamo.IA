@@ -1,7 +1,6 @@
 import os
 import pickle
 from sklearn.model_selection import train_test_split, cross_val_score
-from combine_file import get_data
 import numpy as np
 import pandas as pd
 from sklearn import metrics
@@ -55,17 +54,22 @@ non_ov_cases['Tag'] = 'NonOV'
 # Combine the data into a single dataframe
 # df_cancer = pd.concat([brca_cases, nonbrca_cases, crc_cases, non_crc_cases, luad_cases, non_luad_cases, ov_cases, non_ov_cases], ignore_index=True) #everything except healthy
 # df_cancer = pd.concat([brca_cases, healthy_cases, nonbrca_cases, crc_cases, non_crc_cases, luad_cases, non_luad_cases, ov_cases, non_ov_cases], ignore_index=True) #everything including healthy
-df_cancer = pd.concat([healthy_cases, brca_cases, crc_cases, luad_cases, ov_cases], ignore_index=True) #cases of cancer x healthy
-# df_cancer = pd.concat([healthy_cases, prebrca_cases, cancer_cases], ignore_index=True) #blood samples
+# df_cancer = pd.concat([healthy_cases, brca_cases, crc_cases, luad_cases, ov_cases], ignore_index=True) #cases of cancer x healthy
+#df_cancer = pd.concat([healthy_cases, prebrca_cases, cancer_cases], ignore_index=True) #blood samples
+df_cancer = pd.concat([healthy_cases, prebrca_cases], ignore_index=False) #blood samples
+# df_cancer = pd.concat([healthy_cases, cancer_cases], ignore_index=True) #blood samples
+#df_cancer = pd.concat([prebrca_cases, cancer_cases], ignore_index=True) #blood samples
 
 # Set the first column as the index (cpg sites)
-df_cancer.set_index(df_cancer.columns[0], inplace=True)
+# df_cancer.set_index(df_cancer.columns[0], inplace=True)
 
 # The last column is the target classes
 # Ensure all data is numeric
 X = df_cancer.iloc[:, :-1].apply(pd.to_numeric, errors='coerce')
 Y = df_cancer.iloc[:, -1]
 
+# Create a pair key variable with index and value of the first column
+original_feature_names = {index: value for index, value in enumerate(data_breast[0])}
 
 # Fill missing values with the lowest value of its cpg site
 X = X.apply(lambda col: col.fillna(col.min()), axis=0)
@@ -116,10 +120,10 @@ modes = [
     #     'Name': 'RandomForest300',
     #     'Model': MyXGboost.RandomForest300(X_train, y_train)
     # },
-    {
-        'Name': 'XGBoost',
-        'Model': MyXGboost.XGBoostMultiClass(X_train, y_train)
-    },
+    # {
+    #     'Name': 'XGBoost',
+    #     'Model': MyXGboost.XGBoost(X_train, y_train)
+    # },
     {
         'Name': 'LightGBM',
         'Model': MyXGboost.LightGBM(X_train, y_train)
@@ -184,6 +188,25 @@ for m in modes:
             'F1-Score': class_f1_score
         }])], ignore_index=True)
 
+    # Get feature importances for the model
+    if hasattr(model, 'feature_importances_'):
+          # Get feature importance scores
+        importance = model.feature_importances_
+
+        # Map feature indices to their original names
+        feature_importance_df = pd.DataFrame({
+            'Feature': [original_feature_names[i] for i in range(len(importance))],
+            'Importance': importance
+        })
+
+        # Sort the DataFrame by importance
+        feature_importance_df = feature_importance_df.sort_values(by='Importance', ascending=False)
+
+        # Save the feature importance to a CSV file
+        feature_importance_df.to_csv(model_name + '_feature_importance.csv', index=False)
+
+
+    
 # Print the results
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
