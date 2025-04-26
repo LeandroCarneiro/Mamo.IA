@@ -4,6 +4,9 @@ from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from lightgbm import LGBMClassifier
 
+from sklearn_genetic import GAFeatureSelectionCV
+from sklearn_genetic.plots import plot_fitness_evolution
+
 
 def XGBoostMultiClass(X_train, y_train):
     model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', objective='binary:logistic')
@@ -32,7 +35,6 @@ def RandomForest300(X_train, y_train):
 
 def LightGBM(X_train, y_train):
     model = LGBMClassifier(num_class = 1, objective='binary', metric='binary_logloss', boosting_type='gbdt', num_leaves=31, learning_rate=0.05, n_estimators=20)
-    model.fit(X_train, y_train)
     return model
 
 def LightGBMMulticlass(X_train, y_train):
@@ -63,3 +65,18 @@ def get_best(X_train, y_train):
     grid_search.fit(X_train, y_train)
     
     return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
+
+def ga_feature_selection(estimator_for_GA, X_train, y_train):
+
+    selector = GAFeatureSelectionCV(
+        estimator=estimator_for_GA,
+        cv=5,
+        scoring='accuracy',
+        population_size=20,
+        generations=100,      # Hard stop at 100 cycles
+        n_jobs=-1,            # Use all cores
+        verbose=True
+    )
+
+    selector.fit(X_train, y_train)
+    return selector

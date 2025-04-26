@@ -10,6 +10,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 from imblearn.over_sampling import SMOTE
+import shap
 
 directory_path = './datasets'
 data_health = get_samples(os.path.join(directory_path, 'DT.Healthy.csv'))
@@ -56,8 +57,8 @@ non_ov_cases['Tag'] = 'NonOV'
 # df_cancer = pd.concat([brca_cases, healthy_cases, nonbrca_cases, crc_cases, non_crc_cases, luad_cases, non_luad_cases, ov_cases, non_ov_cases], ignore_index=True) #everything including healthy
 # df_cancer = pd.concat([healthy_cases, brca_cases, crc_cases, luad_cases, ov_cases], ignore_index=True) #cases of cancer x healthy
 #df_cancer = pd.concat([healthy_cases, prebrca_cases, cancer_cases], ignore_index=True) #blood samples
-df_cancer = pd.concat([healthy_cases, prebrca_cases], ignore_index=False) #blood samples
-# df_cancer = pd.concat([healthy_cases, cancer_cases], ignore_index=True) #blood samples
+#df_cancer = pd.concat([healthy_cases, prebrca_cases], ignore_index=False) #blood samples
+df_cancer = pd.concat([healthy_cases, cancer_cases], ignore_index=True) #blood samples
 #df_cancer = pd.concat([prebrca_cases, cancer_cases], ignore_index=True) #blood samples
 
 # Set the first column as the index (cpg sites)
@@ -70,6 +71,7 @@ Y = df_cancer.iloc[:, -1]
 
 # Create a pair key variable with index and value of the first column
 original_feature_names = {index: value for index, value in enumerate(data_breast[0])}
+feature_index = np.array(list(original_feature_names.values()))
 
 # Fill missing values with the lowest value of its cpg site
 X = X.apply(lambda col: col.fillna(col.min()), axis=0)
@@ -140,18 +142,32 @@ modes = [
 
 
 for m in modes:
-    print(f'Best model: {m}')
-    model = m['Model']
+    selector = MyXGboost.ga_feature_selection(m['Model'], X_train, y_train)
+    # Gather the best features
+    best_features = selector.best_features_
+    print("Selected features:", [original_feature_names[i] for i in best_features])
+
+    # Use only these features to train your final model
+    X_train_selected = X_train[:, best_features]
+    X_test_selected = X_test[:, best_features]
+
+    final_model = m['Model'].fit(X_train_selected, y_train)
+
+    explainer = shap.Explainer(final_model, X_train)
+    shap_values = explainer(X_test)
+    shap.summary_plot(shap_values, X_test)
+
+    # shap.dependence_plot(feature_index['Model'], shap_values, X_test)
     # # Cross Validation: CV = 10
     # scores = cross_val_score(model, X_test, y_test, cv=10)
     # print(f'scores: {scores}')
     # print(f'Cross Validation: {scores.mean()}')
     
-    y_pred = model.predict(X_test)
+    y_pred = final_model.predict(X_test)
     print(f'Accuracy: {metrics.accuracy_score(y_test, y_pred)}')
     print('Classification Report:')
     print(metrics.classification_report(y_test, y_pred))
-
+    m['Model'] = final_model
 
 # Create a DataFrame to store the results
 results = pd.DataFrame(columns=['Model', 'Accuracy', 'Precision', 'Recall', 'F1-Score'])
