@@ -7,7 +7,7 @@ pylocal/
 datasets/*
 # C extensions
 *.so
-
+local-env/*
 # Distribution / packaging
 .Python
 build/

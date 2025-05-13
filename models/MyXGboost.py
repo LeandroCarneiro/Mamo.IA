@@ -8,9 +8,9 @@ from sklearn_genetic import GAFeatureSelectionCV
 from sklearn_genetic.plots import plot_fitness_evolution
 
 
-def XGBoostMultiClass(X_train, y_train):
-    model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', objective='binary:logistic')
-    model.fit(X_train, y_train)
+def XGBoostMultiClass():
+    model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', objective='multi:softprob', threshold=0.85)
+    #model.fit(X_train, y_train)
     return model
 
 def XGBoost(X_train, y_train):
