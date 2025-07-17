@@ -6,50 +6,95 @@ from lightgbm import LGBMClassifier
 
 from sklearn_genetic import GAFeatureSelectionCV
 from sklearn_genetic.plots import plot_fitness_evolution
-
+from sklearn.tree import DecisionTreeClassifier
 
 def XGBoostMultiClass():
-    model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', objective='multi:softprob', threshold=0.85)
-    #model.fit(X_train, y_train)
+    # Configured for high-dimensional, 3-class classification
+    model = XGBClassifier(
+        use_label_encoder=False,
+        eval_metric='mlogloss',
+        objective='multi:softprob',
+        num_class=3,
+        max_depth=4,              # deeper trees for complex data
+        learning_rate=0.05,       # lower learning rate for stability
+        n_estimators=50,         # more trees for better performance
+        subsample=0.3,            # prevent overfitting
+        colsample_bytree=0.8,     # use half of features per tree
+        tree_method='hist',       # faster for high-dimensional data 
+        random_state=42,
+        reg_lambda=1.0,          # L2 regularization to prevent overfitting
+        reg_alpha=0.1,           # L1 regularization to enhance feature selection
+        booster='gbtree',        # tree-based boosting
+        early_stopping_rounds=10,  # early stopping to prevent overfitting
+        colsample_bylevel=0.8,      # Feature sampling per level
+        colsample_bynode=0.8,     # Feature sampling per node
+        min_child_weight=1,    # Minimum sum of weights in child
+        gamma=0                    # Minimum loss reduction for split
+    )
+    # Note: thresholding for multiclass is handled at prediction time, not in the model
     return model
 
-def XGBoost(X_train, y_train):
+def DecisionTreeMultiClass():
+    
+    # Configured for high dimensionality problems
+    model = DecisionTreeClassifier(
+        criterion='gini',
+        max_depth=15,       # Prevent overfitting
+        min_samples_split=2,
+        min_samples_leaf=10,
+        max_features='sqrt', # Only consider sqrt(n_features) at each split
+        class_weight='balanced'
+    )
+    return model
+
+def XGBoost():
     model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', objective='binary:logistic')
-    model.fit(X_train, y_train)
     return model
 
-def RandomForest100(X_train, y_train):
+def RandomForest100():
     model = RandomForestClassifier(n_estimators=100)
-    model.fit(X_train, y_train)
     return model
 
-def RandomForest200(X_train, y_train):
+def RandomForest200():
     model = RandomForestClassifier(n_estimators=200)
-    model.fit(X_train, y_train)
     return model
 
-def RandomForest300(X_train, y_train):
+def RandomForest300():
     model = RandomForestClassifier(n_estimators=300)
-    model.fit(X_train, y_train)
     return model
 
-def LightGBM(X_train, y_train):
+def LightGBM():
     model = LGBMClassifier(num_class = 1, objective='binary', metric='binary_logloss', boosting_type='gbdt', num_leaves=31, learning_rate=0.05, n_estimators=20)
     return model
 
-def LightGBMMulticlass(X_train, y_train):
-    model = LGBMClassifier(num_class = 2)
-    model.fit(X_train, y_train)
+def LightGBMMulticlass():
+    # Configured for high-dimensional, 3-class classification
+    model = LGBMClassifier(
+        objective='multiclass',
+        num_class=3,
+        max_depth=8,              # deeper trees for complex data
+        learning_rate=0.05,       # lower learning rate for stability
+        n_estimators=100,         # more trees for better performance
+        subsample=0.8,            # prevent overfitting
+        colsample_bytree=0.5,     # use half of features per tree
+        random_state=42
+    )
     return model
 
-def AdaBoost(X_train, y_train):
-    model = AdaBoostClassifier()
-    model.fit(X_train, y_train)
+def AdaBoostMultiClass():
+    # Configured for high-dimensional, 3-class classification
+    # Uses SAMME for multiclass, base_estimator with max_depth to handle complexity
+    model = AdaBoostClassifier(
+        base_estimator=DecisionTreeClassifier(max_depth=4),  # base estimator for AdaBoost        
+        n_estimators=200,           # more estimators for stability
+        learning_rate=0.05,         # lower learning rate for stability
+        algorithm='SAMME',          # multiclass support
+        random_state=42
+    )
     return model
 
-def GradientBoosting(X_train, y_train):
+def GradientBoosting():
     model = GradientBoostingClassifier()
-    model.fit(X_train, y_train)
     return model
 
 def get_best(X_train, y_train):
@@ -65,18 +110,3 @@ def get_best(X_train, y_train):
     grid_search.fit(X_train, y_train)
     
     return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
-
-def ga_feature_selection(estimator_for_GA, X_train, y_train):
-
-    selector = GAFeatureSelectionCV(
-        estimator=estimator_for_GA,
-        cv=5,
-        scoring='accuracy',
-        population_size=20,
-        generations=100,      # Hard stop at 100 cycles
-        n_jobs=-1,            # Use all cores
-        verbose=True
-    )
-
-    selector.fit(X_train, y_train)
-    return selector

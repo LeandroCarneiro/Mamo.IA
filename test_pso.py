@@ -30,7 +30,7 @@ def load_methylation_data(file_path):
     
     return X, y, feature_names
 
-def main(data_path, n_particles=30, max_iter=100, init_prob=0.3, min_features=5):
+def main(data_path, n_particles=100, max_iter=100, init_prob=0.3, min_features=5):
     """Main function to run the PSO feature selection with XGBoost"""
     # Load methylation data
     print("Loading DNA methylation data...")
@@ -91,23 +91,7 @@ def main(data_path, n_particles=30, max_iter=100, init_prob=0.3, min_features=5)
               min_features=min_features)
     
     # Run optimization
-    # Run optimization
     best_position, best_fitness = pso.optimize(X, Y)
-    
-    # Plot best position (selected features)
-    plt.figure(figsize=(12, 6))
-    plt.subplot(1, 2, 1)
-    plt.bar(range(len(best_position)), best_position)
-    plt.title(f'Best Feature Selection\nTotal features: {int(sum(best_position))}')
-    plt.xlabel('Feature Index')
-    plt.ylabel('Selection Status (0/1)')
-    
-    # Plot best fitness
-    plt.subplot(1, 2, 2)
-    plt.bar(['Best Fitness'], [best_fitness])
-    plt.title(f'Best Fitness: {best_fitness:.4f}')
-    plt.tight_layout()
-    plt.show()
     
     # Plot progress
     pso.plot_progress()

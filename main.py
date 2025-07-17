@@ -1,232 +1,203 @@
 import os
-import pickle
-from sklearn.model_selection import train_test_split, cross_val_score
 import numpy as np
 import pandas as pd
-from sklearn import metrics
-from helpers.datasetHelper import get_samples, split_breast_data, split_colon_data, split_healthy_data, split_lung_data, split_ovarian_data
-from models import MyXGboost
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, f1_score, roc_auc_score
+from tqdm import tqdm
 from sklearn.preprocessing import LabelEncoder
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import MinMaxScaler
+
+import matplotlib.pyplot as plt
+
+from helpers.datasetHelper import get_samples, split_healthy_data
+from pyswarm import pso
+
+from sklearn.tree import DecisionTreeClassifier
 from imblearn.over_sampling import SMOTE
-import shap
+
+from sklearn.metrics import make_scorer
+from sklearn.metrics import cohen_kappa_score
+
+from models import MyXGboost
+
+
+
+def run_pso_with_progress(X, Y, estimator, n_features,
+                          swarmsize=50, maxiter=10, threshold=0.7):
+    lb = [0]*n_features
+    ub = [1]*n_features
+    progress = []
+
+    # Create a scorer for Cohen's Kappa
+    kappa_scorer = make_scorer(cohen_kappa_score)
+
+    def objective_with_progress(weights, est, X_, Y_):
+        Xw = X_ * weights
+                
+        # Use it in cross_val_score
+        fit = 1 - cross_val_score(est, Xw, Y_, cv=5, scoring=kappa_scorer).mean()
+        progress.append(fit)
+        
+        if len(progress) % 10 == 0:
+            print(f"Eval {len(progress)}: best fitness so far = {min(progress):.4f}")
+        return fit
+
+    best_pos, best_fit = pso(
+        objective_with_progress,
+        lb, ub,
+        args=(estimator, X, Y),
+        swarmsize=swarmsize,
+        maxiter=maxiter
+    )
+
+    mask = best_pos > threshold
+    selected_features = np.where(mask)[0].tolist()
+    return best_pos, best_fit, progress, selected_features
+
 
 directory_path = './datasets'
 data_health = get_samples(os.path.join(directory_path, 'DT.Healthy.csv'))
-data_ovarian = get_samples(os.path.join(directory_path, 'DT.Ovarian.csv'))
-data_lung = get_samples(os.path.join(directory_path, 'DT.Lung.csv'))
-data_colon = get_samples(os.path.join(directory_path, 'DT.Colorectal.csv'))
-data_breast = get_samples(os.path.join(directory_path, 'DT.Mama.csv'))
 
 # Load the PAN-CANCER-TRANSPOSED.csv data
 healthy_cases, prebrca_cases, cancer_cases = split_healthy_data(data_health)
-brca_cases, nonbrca_cases = split_breast_data(data_breast)
-crc_cases, non_crc_cases = split_colon_data(data_colon)
-luad_cases, non_luad_cases = split_lung_data(data_lung)
-ov_cases, non_ov_cases = split_ovarian_data(data_ovarian)
-
 
 # Combine the data into a single dataframe
 # Tag each list of cases
 healthy_cases = pd.DataFrame(healthy_cases)
-healthy_cases['Tag'] = 'Healthy'
+healthy_cases['Tag'] = 'HEALTHY'
 prebrca_cases = pd.DataFrame(prebrca_cases)
-prebrca_cases['Tag'] = 'PreBRCA'
+prebrca_cases['Tag'] = 'PRE-BRCA'
 cancer_cases = pd.DataFrame(cancer_cases)
-cancer_cases['Tag'] = 'Cancer'
-brca_cases = pd.DataFrame(brca_cases)
-brca_cases['Tag'] = 'BRCA'
-nonbrca_cases = pd.DataFrame(nonbrca_cases)
-nonbrca_cases['Tag'] = 'NonBRCA'
-crc_cases = pd.DataFrame(crc_cases)
-crc_cases['Tag'] = 'CRC'
-non_crc_cases = pd.DataFrame(non_crc_cases)
-non_crc_cases['Tag'] = 'NonCRC'
-luad_cases = pd.DataFrame(luad_cases)
-luad_cases['Tag'] = 'LUAD'
-non_luad_cases = pd.DataFrame(non_luad_cases)
-non_luad_cases['Tag'] = 'NonLUAD'
-ov_cases = pd.DataFrame(ov_cases)
-ov_cases['Tag'] = 'OV'
-non_ov_cases = pd.DataFrame(non_ov_cases)
-non_ov_cases['Tag'] = 'NonOV'
+cancer_cases['Tag'] = 'BRCA'
 
-# Combine the data into a single dataframe
-# df_cancer = pd.concat([brca_cases, nonbrca_cases, crc_cases, non_crc_cases, luad_cases, non_luad_cases, ov_cases, non_ov_cases], ignore_index=True) #everything except healthy
-# df_cancer = pd.concat([brca_cases, healthy_cases, nonbrca_cases, crc_cases, non_crc_cases, luad_cases, non_luad_cases, ov_cases, non_ov_cases], ignore_index=True) #everything including healthy
-# df_cancer = pd.concat([healthy_cases, brca_cases, crc_cases, luad_cases, ov_cases], ignore_index=True) #cases of cancer x healthy
-#df_cancer = pd.concat([healthy_cases, prebrca_cases, cancer_cases], ignore_index=True) #blood samples
-#df_cancer = pd.concat([healthy_cases, prebrca_cases], ignore_index=False) #blood samples
-df_cancer = pd.concat([healthy_cases, cancer_cases], ignore_index=True) #blood samples
-#df_cancer = pd.concat([prebrca_cases, cancer_cases], ignore_index=True) #blood samples
+print("Data loaded successfully.")
 
-# Set the first column as the index (cpg sites)
-# df_cancer.set_index(df_cancer.columns[0], inplace=True)
-
-# The last column is the target classes
-# Ensure all data is numeric
+df_cancer = pd.concat([healthy_cases, prebrca_cases, cancer_cases], ignore_index=True) #blood samples
 X = df_cancer.iloc[:, :-1].apply(pd.to_numeric, errors='coerce')
 Y = df_cancer.iloc[:, -1]
 
-# Create a pair key variable with index and value of the first column
-original_feature_names = {index: value for index, value in enumerate(data_breast[0])}
-feature_index = np.array(list(original_feature_names.values()))
+feature_names = np.array(data_health[0][:-1])
 
 # Fill missing values with the lowest value of its cpg site
 X = X.apply(lambda col: col.fillna(col.min()), axis=0)
 
-# Apply PCA normalization 0 to 1 on X
-scaler = MinMaxScaler()
-X_scaled = scaler.fit_transform(X)
+print(feature_names)  # Display first 5 feature names for brevity
 
-pca = PCA(n_components=0.95, svd_solver='full')  # Keep 95% of variance
-X = pca.fit_transform(X_scaled)
+n_features = X.shape[1]
+print(f"Loaded dataset with {n_features} features and {len(Y)} samples")
+
+# Use DecisionTreeClassifier as the estimator
+estimator = MyXGboost.DecisionTreeMultiClass()
+
+# 2) Run PSO
+# For high-dimensional data (27k features), reduce swarmsize and maxiter for tractability
+best_weights, best_fitness, progress, X_selected = run_pso_with_progress(
+    X, Y, estimator, n_features,
+    swarmsize=10,   # smaller swarm for memory/speed
+    maxiter=25,      # fewer iterations to avoid long runtimes
+    threshold=0.90  # higher threshold to select only strongest features
+)
+print(f"Done PSO → best fitness = {best_fitness:.4f}")
+
+print(X_selected) 
+print(best_fitness)
+print(best_weights.shape)
+
+
+# select features with PSO weight > 0.95
+mask = best_weights > 0.9
+X_selected = X.iloc[:, mask]
+# how many features we kept
+print(f"Threshold=0.9, selected {X_selected.shape[1]} features")
+# Show the selected features
+print("Selected features:")
+selected_feature_names = feature_names[mask]
+print(selected_feature_names)
+
 
 # Use LabelEncoder to encode the target classes
 label_encoder = LabelEncoder()
 Y_encoded = label_encoder.fit_transform(Y)
 
-# Find duplicated instances in the dataframe
-duplicated_instances = df_cancer[df_cancer.duplicated()]
+# 1) evaluate with all features
+X_train_all, X_test_all, y_train_all, y_test_all = train_test_split(
+    X, Y_encoded, test_size=0.2, random_state=42
+)
+# Apply SMOTE to balance the training instances
+smote = SMOTE(sampling_strategy='auto', random_state=None, k_neighbors=10)
+X_train_all, y_train_all = smote.fit_resample(X_train_all, y_train_all)
 
-# Print the duplicated instances
-if not duplicated_instances.empty:
-    print("Duplicated instances in the dataframe:")
-    print(duplicated_instances)
-else:
-    print("No duplicated instances found in the dataframe.")
-
-# Print the encoded target classes
-print("Encoded target classes (Y_encoded):")
-print(np.unique(Y_encoded))
-
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, Y_encoded, test_size=0.3, shuffle=True)
-
+# 2) evaluate with selected features
+X_train, X_test, y_train, y_test = train_test_split(
+    X_selected, Y_encoded, test_size=0.2, random_state=42
+)
 # Apply SMOTE to balance the training instances
 smote = SMOTE(sampling_strategy='auto', random_state=None, k_neighbors=10)
 X_train, y_train = smote.fit_resample(X_train, y_train)
 
-
 modes = [
-    # {
-    #     'Name': 'RandomForest100',
-    #     'Model': MyXGboost.RandomForest100(X_train, y_train)
-    # },
-    # {
-    #     'Name': 'RandomForest200',
-    #     'Model': MyXGboost.RandomForest200(X_train, y_train)
-    # },
-    # {
-    #     'Name': 'RandomForest300',
-    #     'Model': MyXGboost.RandomForest300(X_train, y_train)
-    # },
-    # {
-    #     'Name': 'XGBoost',
-    #     'Model': MyXGboost.XGBoost(X_train, y_train)
-    # },
+    {
+        'Name': 'RandomForest100',
+        'Model': MyXGboost.RandomForest100()
+    },
+    {
+        'Name': 'RandomForest200',
+        'Model': MyXGboost.RandomForest200()
+    },
+    {
+        'Name': 'RandomForest300',
+        'Model': MyXGboost.RandomForest300()
+    },
+    {
+        'Name': 'XGBoost',
+        'Model': MyXGboost.XGBoostMultiClass()
+    },
     {
         'Name': 'LightGBM',
-        'Model': MyXGboost.LightGBM(X_train, y_train)
+        'Model': MyXGboost.LightGBMMulticlass()
     },
-    # {
-    #     'Name': 'AdaBoost',
-    #     'Model': MyXGboost.AdaBoost(X_train, y_train)
-    # },
-    # {
-    #     'Name': 'GradientBoosting',
-    #     'Model': MyXGboost.GradientBoosting(X_train, y_train)
-    # }
+    {
+        'Name': 'AdaBoost',
+        'Model': MyXGboost.AdaBoost()
+    },
+    {
+        'Name': 'GradientBoosting',
+        'Model': MyXGboost.GradientBoosting()
+    }
 ]
 
-
 for m in modes:
-    selector = MyXGboost.ga_feature_selection(m['Model'], X_train, y_train)
-    # Gather the best features
-    best_features = selector.best_features_
-    print("Selected features:", [original_feature_names[i] for i in best_features])
-
-    # Use only these features to train your final model
-    X_train_selected = X_train[:, best_features]
-    X_test_selected = X_test[:, best_features]
-
-    final_model = m['Model'].fit(X_train_selected, y_train)
-
-    explainer = shap.Explainer(final_model, X_train)
-    shap_values = explainer(X_test)
-    shap.summary_plot(shap_values, X_test)
-
-    # shap.dependence_plot(feature_index['Model'], shap_values, X_test)
-    # # Cross Validation: CV = 10
-    # scores = cross_val_score(model, X_test, y_test, cv=10)
-    # print(f'scores: {scores}')
-    # print(f'Cross Validation: {scores.mean()}')
+    selector = m['Model'].fit(X_train, y_train)
     
-    y_pred = final_model.predict(X_test)
-    print(f'Accuracy: {metrics.accuracy_score(y_test, y_pred)}')
-    print('Classification Report:')
-    print(metrics.classification_report(y_test, y_pred))
-    m['Model'] = final_model
+    # Evaluate the model
+    y_pred = selector.predict(X_test)
+    y_pred_proba = selector.predict_proba(X_test)
+    #print(f'Predict probability: {y_pred_proba}')
+          
+    accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average='weighted')
+    # Handle binary and multiclass cases for ROC AUC
+    y_pred_proba = selector.predict_proba(X_test)
+    if y_pred_proba.shape[1] == 2:
+        roc_auc = roc_auc_score(y_test, y_pred_proba[:, 1])
+    else:
+        roc_auc = roc_auc_score(y_test, y_pred_proba, multi_class='ovr')
 
-# Create a DataFrame to store the results
-results = pd.DataFrame(columns=['Model', 'Accuracy', 'Precision', 'Recall', 'F1-Score'])
+    print(f"Model: {m['Name']}, Accuracy: {accuracy:.4f}, F1 Score: {f1:.4f}, ROC AUC: {roc_auc:.4f}")
 
-for m in modes:
-    model_name = m['Name']
-    model = m['Model']
-    # Save the model
-    model_filename = f'{model_name}_model.pkl'
-    with open(model_filename, 'wb') as file:
-        pickle.dump(model, file)
+    # Compute Kappa index for all features
+    kappa = cohen_kappa_score(y_test, y_pred)
+    print("Selected features → Kappa index:", kappa)
 
-    y_pred = model.predict(X_test)
-    accuracy = metrics.accuracy_score(y_test, y_pred)
-    report = metrics.classification_report(y_test, y_pred, target_names=label_encoder.classes_, output_dict=True)
-    
-    # Calculate average precision, recall, and f1-score
-    precision = np.mean([report[class_name]['precision'] for class_name in label_encoder.classes_])
-    recall = np.mean([report[class_name]['recall'] for class_name in label_encoder.classes_])
-    f1_score = np.mean([report[class_name]['f1-score'] for class_name in label_encoder.classes_])
-   
-    for class_name in label_encoder.classes_:
-        class_precision = report[class_name]['precision']
-        class_recall = report[class_name]['recall']
-        class_f1_score = report[class_name]['f1-score']
-        
-        # Append the results to the DataFrame
-        results = pd.concat([results, pd.DataFrame([{
-            'Model': model_name,
-            'Class': class_name,
-            'Accuracy': accuracy,
-            'Precision': class_precision,
-            'Recall': class_recall,
-            'F1-Score': class_f1_score
-        }])], ignore_index=True)
+    #2) Confusion matrices side by side
+    disp = ConfusionMatrixDisplay.from_estimator(selector, X_test, y_test, normalize='true')
+    disp.ax_.set_title("Normalized Confusion Matrix")
+    plt.show()
 
-    # Get feature importances for the model
-    if hasattr(model, 'feature_importances_'):
-          # Get feature importance scores
-        importance = model.feature_importances_
-
-        # Map feature indices to their original names
-        feature_importance_df = pd.DataFrame({
-            'Feature': [original_feature_names[i] for i in range(len(importance))],
-            'Importance': importance
-        })
-
-        # Sort the DataFrame by importance
-        feature_importance_df = feature_importance_df.sort_values(by='Importance', ascending=False)
-
-        # Save the feature importance to a CSV file
-        feature_importance_df.to_csv(model_name + '_feature_importance.csv', index=False)
-
-
-    
-# Print the results
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
-pd.set_option('display.max_colwidth', None)
-
-print(results)
+    if hasattr(selector, 'feature_importances_'):
+        importances = selector.feature_importances_
+        indices = np.argsort(importances)[::-1][:20]
+        print("Top 20 important features:")
+        for rank, idx in enumerate(indices, 1):
+            print(f"{rank}. {selected_feature_names[idx]}: {importances[idx]:.4f}")
+    else:
+        print("This model does not provide feature importances.")

@@ -4,7 +4,7 @@ from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import cross_val_score, train_test_split
 from tqdm import tqdm
 
-from models.MyXGboost import XGBoostMultiClass
+from models.MyXGboost import DecisionTreeMultiClass, XGBoostMultiClass
 
 
 class Particle:
@@ -52,16 +52,16 @@ class Particle:
         values_selected = X_selected.values
 
         # Use XGBoost classifier with cross-validation
-        clf = XGBoostMultiClass()
+        clf = DecisionTreeMultiClass()
         # clf.fit(values_selected, y)
-        # print(clf.score(values_selected, y))
+        # print(clf.score(values_selected, y    ))
 
 
         cv_score = cross_val_score(clf, values_selected, y, cv=5, scoring='accuracy')
         
         # Calculate fitness (mean AUC - penalty for too many features)
         mean_auc = np.mean(cv_score)
-        penalty = 0.001 * n_selected / len(self.position)
+        penalty = 0.5 * n_selected / len(self.position)
         fitness = mean_auc - penalty
         
         # Update personal best if current fitness is better
@@ -72,7 +72,7 @@ class Particle:
         return fitness
 
 class MyPSO:
-    def __init__(self, n_particles, n_features, max_iter=100, w=0.7, c1=1.5, c2=1.5, init_prob=0.5, min_features=5):
+    def __init__(self, n_particles, n_features, max_iter=10, w=0.1, c1=1.5, c2=1.5, init_prob=0.5, min_features=5):
         self.n_particles = n_particles
         self.n_features = n_features
         self.max_iter = max_iter
@@ -144,7 +144,7 @@ class MyPSO:
     def evaluate_final_model(self, X, y, feature_names=None, test_size=0.2):
         """Evaluate the final model with the selected features"""
         selected_features = self.gbest_position.astype(bool)
-        X_selected = X[:, selected_features]
+        X_selected = X.iloc[:, selected_features]
         
         # Split the data
         X_train, X_test, y_train, y_test = train_test_split(X_selected, y, test_size=test_size, random_state=42)
@@ -165,12 +165,10 @@ class MyPSO:
         print(f"F1 Score: {f1:.4f}")
         print(f"AUC: {auc:.4f}")
         
-        # Print selected features if names are provided
+
+        # Print selected feature names if provided
         if feature_names is not None:
-            selected_indices = np.where(selected_features)[0]
-            selected_names = feature_names[selected_indices]
-            print("\nSelected features:")
-            for i, feature in enumerate(selected_names):
-                print(f"{i+1}. {feature}")
-        
-        return clf, (accuracy, f1, auc)
+            selected_feature_names = feature_names[selected_features]
+            print("Selected features:")
+            for name in selected_feature_names:
+                print(name)
