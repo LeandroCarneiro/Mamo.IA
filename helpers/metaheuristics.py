@@ -7,7 +7,7 @@ import random
 from pyswarm import pso
 
 def run_pso_with_progress(X, Y, estimator, n_features,
-                          swarmsize=50, maxiter=10, threshold=0.7):
+                          swarmsize=30, maxiter=100, threshold=0.7):
     lb = [0]*n_features
     ub = [1]*n_features
     progress = []
@@ -40,9 +40,9 @@ def run_pso_with_progress(X, Y, estimator, n_features,
 
 def run_two_stage_pso(X, Y, estimator, n_features,
                       # Stage 1 parameters
-                      stage1_swarmsize=30, stage1_maxiter=25, stage1_threshold=0.4,
+                      stage1_swarmsize=30, stage1_maxiter=100, stage1_threshold=0.4,
                       # Stage 2 parameters  
-                      stage2_swarmsize=25, stage2_maxiter=25, stage2_threshold=0.7,
+                      stage2_swarmsize=25, stage2_maxiter=200, stage2_threshold=0.8,
                       # General parameters
                       verbose=True):
     if verbose:
@@ -171,7 +171,7 @@ def run_two_stage_pso_simple(X, Y, estimator, n_features,
 
 
 def run_ga_with_progress(X, Y, estimator, n_features,
-                        pop_size=50, n_generations=100, threshold=0.7,
+                        pop_size=20, n_generations=100, threshold=0.7,
                         cx_prob=0.5, mut_prob=0.2, tournament_size=3):
    
     progress = []
