@@ -2,7 +2,7 @@ from sklearn.metrics import confusion_matrix
 import pandas as pd
 import plotly.express as px
 
-def display_confusion_matrix_pink_variants(estimator, X_test, y_test):
+def display_confusion_matrix_pink_variants(estimator, X_test, y_test, classes):
     # Get predictions
     y_pred = estimator.predict(X_test)
     
@@ -13,7 +13,6 @@ def display_confusion_matrix_pink_variants(estimator, X_test, y_test):
     cm = cm * 100
     
     # Create a dataframe for plotting
-    classes = ['BRCA', 'HEALTHY', 'PRE-BRCA']
     df_cm = pd.DataFrame(cm, index=classes, columns=classes)
     
     fig = px.imshow(

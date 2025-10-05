@@ -4,13 +4,13 @@ from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from lightgbm import LGBMClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-def XGBoostMultiClass():
+def XGBoostMultiClass(num_classes=3):
     # Configured for high-dimensional, 3-class classification
     model = XGBClassifier(
         use_label_encoder=False,
         eval_metric='mlogloss',
         objective='multi:softprob',
-        num_class=3,
+        num_class=num_classes,
         max_depth=30,              # deeper trees for complex data
         learning_rate=0.05,       # lower learning rate for stability
         n_estimators=50,         # more trees for better performance
@@ -115,8 +115,8 @@ def RandomForest300():
     }
     return model, param_grid
 
-def LightGBMMulticlass():
-    model = LGBMClassifier(objective='multiclass', num_class=3, random_state=42)
+def LightGBMMulticlass(num_classes=3):
+    model = LGBMClassifier(objective='multiclass', num_class=num_classes, random_state=42)
     param_grid = {
         'max_depth': [6, 8, 10],
         'learning_rate': [0.01, 0.05, 0.1],

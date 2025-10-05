@@ -21,7 +21,7 @@ from sklearn.metrics import recall_score, precision_score
 # Set the default renderer to 'browser' to ensure plots open in the browser
 pio.renderers.default = 'browser'
 
-directory_path = './datasets'
+directory_path = './datasets/Combined'
 data_health = get_samples(os.path.join(directory_path, 'DT.Healthy.csv'))
 # Load the PAN-CANCER-TRANSPOSED.csv data
 healthy_cases, prebrca_cases, cancer_cases = split_healthy_data(data_health)
