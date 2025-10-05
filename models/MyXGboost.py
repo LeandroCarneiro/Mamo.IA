@@ -3,6 +3,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from lightgbm import LGBMClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import AdaBoostClassifier
 
 def XGBoostMultiClass(num_classes=3):
     # Configured for high-dimensional, 3-class classification
@@ -149,6 +150,25 @@ def GradientBoosting():
         'min_samples_split': [2, 5, 10],
         'min_samples_leaf': [1, 2, 4],
         'max_features': ['sqrt', 'log2', None]
+    }
+    return model, param_grid
+
+
+def AdaBoostBinary():
+    model = AdaBoostClassifier(random_state=42)
+    param_grid = {
+        'n_estimators': [50, 100, 200],
+        'learning_rate': [0.01, 0.05, 0.1],
+        'algorithm': ['SAMME', 'SAMME.R']
+    }
+    return model, param_grid
+
+def AdaBoostMultiClass():
+    model = AdaBoostClassifier(random_state=42)
+    param_grid = {
+        'n_estimators': [50, 100, 200],
+        'learning_rate': [0.01, 0.05, 0.1],
+        'algorithm': ['SAMME', 'SAMME.R']
     }
     return model, param_grid
 
