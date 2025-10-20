@@ -50,22 +50,10 @@ def XGBoostBinary():
     model = XGBClassifier(
         use_label_encoder=False,
         eval_metric='logloss',
-        objective='binary:logistic',
-        max_depth=30,
-        learning_rate=0.05,
-        n_estimators=50,
-        subsample=0.3,
-        colsample_bytree=0.8,
-        tree_method='hist',
-        random_state=42,
-        reg_lambda=1.0,
-        reg_alpha=0.1,
-        booster='gbtree',
-        colsample_bylevel=0.8,
-        colsample_bynode=0.8,
-        min_child_weight=1,
-        gamma=0,
-        max_delta_step=1,
+        max_depth=6,
+        learning_rate=0.1,
+        n_estimators=200,
+        random_state=42
     )
 
     param_grid = {
