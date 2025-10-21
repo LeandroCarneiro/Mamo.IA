@@ -6,8 +6,7 @@ from deap import base, creator, tools, algorithms
 import random
 from pyswarm import pso
 
-def run_pso_with_progress(X, Y, estimator, n_features,
-                          swarmsize=30, maxiter=100, threshold=0.7):
+def run_pso_with_progress(X, Y, estimator, n_features, swarmsize=30, maxiter=100, threshold=0.7):
     lb = [0]*n_features
     ub = [1]*n_features
     progress = []
