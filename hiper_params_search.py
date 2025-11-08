@@ -7,6 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+from xgboost import XGBClassifier
 
 
 def get_best_knn(X_train, y_train):
@@ -135,3 +136,27 @@ def get_best_decision_tree(X_train, y_train):
     # print(f"Best parameters: {best_params}")
     score = grid_search.best_score_
     return best_dt_model, best_params, score
+
+def get_best_xgboost(X_train, y_train):
+    param_grid = {
+        'n_estimators': [100, 200, 300],
+        'max_depth': [3, 4, 6, 8],
+        'learning_rate': [0.01, 0.05, 0.1, 0.2],
+        'subsample': [0.6, 0.8, 1.0],
+        'colsample_bytree': [0.6, 0.8, 1.0],
+        'gamma': [0, 1, 5],
+        'reg_alpha': [0, 0.1, 1]
+    }
+
+    xgb = XGBClassifier(use_label_encoder=False, eval_metric='logloss', verbosity=0)
+
+    grid_search = GridSearchCV(xgb, param_grid, cv=5, scoring='accuracy', n_jobs=-1)
+
+    grid_search.fit(X_train, y_train)
+
+    best_params = grid_search.best_params_
+    best_xgb_model = grid_search.best_estimator_
+    score = grid_search.best_score_
+    print("Best XGBoost parameters:", best_params)
+    print(f"Best XGBoost CV score: {score:.4f}")
+    return best_xgb_model, best_params, score

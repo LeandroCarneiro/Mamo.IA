@@ -7,58 +7,29 @@ def get_samples(file_path):
     # Transpose the data to iterate through columns instead of rows
     return df.T.values
 
-def split_healthy_data(data):
-    # Initialize lists for each class
-    healthy_cases = []
+def split_data(data):
+    healthy_mt_cases = []
+    healthy_wt_cases = []
+    healthy_unk_cases = []
     prebrca_cases = []
-    brca_cases = []
+    brca_mt_cases = []
+    brca_wt_cases = []
 
     for row in data:
-        if row[-1] == 'HEALTHY':
-            healthy_cases.append(row[:-1])
+        if row[-1] == 'HEALTHY-MT':
+            healthy_mt_cases.append(row[:-1])
+        elif row[-1] == 'HEALTHY-WT':
+            healthy_wt_cases.append(row[:-1])
+        elif row[-1] == 'HEALTHY-UNK':
+            healthy_unk_cases.append(row[:-1])
         elif row[-1] == 'PRE-BRCA':
-            prebrca_cases.append(row[:-1])
-        elif row[-1] == 'BRCA':
-            brca_cases.append(row[:-1])
-
-    return healthy_cases, prebrca_cases, brca_cases
-
-def split_healthy_data_HxC(data):
-    # Initialize lists for each class
-    healthy_mt_cases = []
-    healthy_wt_cases = []
-    brca_mt_cases = []
-    brca_wt_cases = []
-
-    for row in data:
-        if row[-1] == 'HEALTHY-MUT':
-            healthy_mt_cases.append(row[:-1])
-        elif row[-1] == 'HEALTHY-WT':
-            healthy_wt_cases.append(row[:-1])
-        elif row[-1] == 'BRCA-MUT':
+            prebrca_cases.append(row[:-1])  
+        elif row[-1] == 'BRCA-MT':
             brca_mt_cases.append(row[:-1])
         elif row[-1] == 'BRCA-WT':
-            brca_wt_cases.append(row[:-1])  
+            brca_wt_cases.append(row[:-1])
             
-    return healthy_mt_cases, healthy_wt_cases, brca_mt_cases, brca_wt_cases
-
-def split_healthy_data_MtxWt(data):
-    # Initialize lists for each class
-    healthy_mt_cases = []
-    healthy_wt_cases = []
-    brca_mt_cases = []
-    brca_wt_cases = []
-
-    for row in data:
-        if row[-1] == 'HEALTHY-MUT':
-            healthy_mt_cases.append(row[:-1])
-        elif row[-1] == 'HEALTHY-WT':
-            healthy_wt_cases.append(row[:-1])
-        elif row[-1] == 'BRCA-MUT':
-            brca_mt_cases.append(row[:-1])
-        elif row[-1] == 'BRCA-WT':
-            brca_wt_cases.append(row[:-1])  
-    return healthy_mt_cases, healthy_wt_cases, brca_mt_cases, brca_wt_cases
+    return healthy_mt_cases, healthy_wt_cases, healthy_unk_cases, prebrca_cases, brca_mt_cases, brca_wt_cases
 
 def split_ovarian_data(data):
     # Initialize lists for each class
