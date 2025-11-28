@@ -1,7 +1,0 @@
-Ada Boost - Healthy vs BRCA - TEST Accuracy (cv = 5): 1.0000
-Ada Boost - Healthy vs BRCA - TEST F1 Score (cv = 5): 1.0000
-Ada Boost - Healthy vs BRCA - TEST ROC AUC (cv = 5): 1.0000
-Ada Boost - Healthy vs BRCA - TEST Sensitivity (cv = 5) : 1.0000
-Ada Boost - Healthy vs BRCA - TEST Specificity (cv = 5): 1.0000
-Ada Boost - Healthy vs BRCA - TEST Precision (cv = 5): 1.0000
-Ada Boost - Healthy vs BRCA - TEST Kappa index (cv = 5): 1.0000

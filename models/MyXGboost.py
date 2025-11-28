@@ -6,26 +6,16 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier
 
 def XGBoostMultiClass():
-    # Configured for high-dimensional, 3-class classification
     model = XGBClassifier(
-        # use_label_encoder=False,
-        # eval_metric='mlogloss',
-        objective='multi:softprob',
-        # max_depth=30,              # deeper trees for complex data
-        # learning_rate=0.05,       # lower learning rate for stability
-        # n_estimators=50,         # more trees for better performance
-        # subsample=0.3,            # prevent overfitting
-        # colsample_bytree=0.8,     # use half of features per tree
-        # tree_method='hist',       # faster for high-dimensional data 
-        # random_state=42,
-        # reg_lambda=1.0,          # L2 regularization to prevent overfitting
-        # reg_alpha=0.1,           # L1 regularization to enhance feature selection
-        # booster='gbtree',        # tree-based boosting
-        # colsample_bylevel=0.8,      # Feature sampling per level
-        # colsample_bynode=0.8,     # Feature sampling per node
-        # min_child_weight=1,    # Minimum sum of weights in child
-        # gamma=0,     # Minimum loss reduction for split       
-        # max_delta_step=1,               # Help with class imbalance
+        use_label_encoder=True,
+        eval_metric='mlogloss',
+        objective='multi:logistic',
+        sampling_method='uniform', 
+        max_depth=5,              # deeper trees for complex data
+        learning_rate=0.1,       # lower learning rate for stability
+        n_estimators=1000,         # more trees for better performance
+        random_state=42,  
+        max_delta_step=1,               # Help with class imbalance
     )
 
     param_grid = {
@@ -49,7 +39,7 @@ def DecisionTreeMultiClass():
     # Configured for high dimensionality problems
     model = DecisionTreeClassifier(
         criterion='gini',
-        max_depth=30,       # Prevent overfitting
+        max_depth=5,       # Prevent overfitting
         min_samples_split=2,
         min_samples_leaf=1,
         max_features='sqrt', # Only consider sqrt(n_features) at each split
@@ -57,16 +47,10 @@ def DecisionTreeMultiClass():
     )
     return model
 
-def RandomForest100():
-    model = RandomForestClassifier(n_estimators=100)
-    return model
-
-def RandomForest200():
-    model = RandomForestClassifier(n_estimators=200)
-    return model
-
 def RandomForest300():
-    model = RandomForestClassifier(n_estimators=300, random_state=42)
+    model = RandomForestClassifier(
+        n_estimators=1000,
+        random_state=42)
     param_grid = {
         'max_depth': [10, 20, 30],
         'min_samples_split': [2, 5, 10],
@@ -77,19 +61,37 @@ def RandomForest300():
     return model, param_grid
 
 def LightGBMMulticlass():
-    model = LGBMClassifier(objective='multiclass', random_state=42)
+    model = LGBMClassifier(
+        objective='multiclass',
+        random_state=42,
+        verbosity=-1, 
+        learning_rate=0.1,  # Lower learning rate for better accuracy
+        num_leaves=1000,  # Higher complexity for high-dimensional data
+        max_depth=-1,  # No limit on depth for flexibility
+        min_data_in_leaf=20,  # Prevent overfitting
+        device='cpu',  # Utilize GPU for faster training
+        force_col_wise=True
+    )
     param_grid = {
-        'max_depth': [6, 8, 10],
         'learning_rate': [0.01, 0.05, 0.1],
-        'n_estimators': [50, 100, 200],
-        'subsample': [0.6, 0.8, 1.0],
-        'colsample_bytree': [0.5, 0.8, 1.0],
-        'num_leaves': [31, 63, 127]
+        'num_leaves': [63, 127, 255],
+        'max_depth': [10, 15, 20],
+        'min_data_in_leaf': [10, 20, 30],
+        'lambda_l1': [0, 0.1, 0.5],
+        'lambda_l2': [0, 0.2, 0.5],
+        'min_gain_to_split': [0.01, 0.1, 0.5],
+        'feature_fraction': [0.6, 0.8, 1.0],
+        'bagging_fraction': [0.6, 0.8, 1.0],
+        'bagging_freq': [1, 5, 10]
     }
     return model, param_grid
 
 def GradientBoosting():
-    model = GradientBoostingClassifier()
+    model = GradientBoostingClassifier(
+        random_state=42,
+        learning_rate=0.1,
+        n_estimators=1000
+    )
     param_grid = {
         'n_estimators': [50, 100, 200],
         'learning_rate': [0.01, 0.05, 0.1],
@@ -102,7 +104,11 @@ def GradientBoosting():
     return model, param_grid
 
 def AdaBoostMultiClass():
-    model = AdaBoostClassifier(random_state=42)
+    model = AdaBoostClassifier(
+        random_state=42,
+        n_estimators=1000,
+        learning_rate=0.1
+        )
     param_grid = {
         'n_estimators': [50, 100, 200],
         'learning_rate': [0.01, 0.05, 0.1],

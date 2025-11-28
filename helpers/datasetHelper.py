@@ -20,7 +20,7 @@ def split_data(data):
             healthy_mt_cases.append(row[:-1])
         elif row[-1] == 'HEALTHY-WT':
             healthy_wt_cases.append(row[:-1])
-        elif row[-1] == 'HEALTHY-UNK':
+        elif row[-1] == 'HEALTHY':
             healthy_unk_cases.append(row[:-1])
         elif row[-1] == 'PRE-BRCA':
             prebrca_cases.append(row[:-1])  
